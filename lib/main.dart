@@ -34,7 +34,7 @@ class MUApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueChangeObserver<bool>(
-      cacheKey: SettingsState.keyDarkMode,
+      cacheKey: SettingsWidget.keyDarkMode,
       defaultValue: false,
       builder: (_, isDarkMode, __) => MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -92,7 +92,7 @@ class _NavigationState extends State<Navigation> {
       body: <Widget>[
         const Events(),
         const Feed(),
-        SettingsWidget(),
+        const SettingsWidget(),
       ][currentPageIndex],
     );
   }
@@ -140,11 +140,13 @@ class Feed extends StatelessWidget {
 
 
 class SettingsWidget extends StatefulWidget {
+  const SettingsWidget({super.key});
+  static const keyDarkMode = _SettingsState.keyDarkMode;
   @override
-  SettingsState createState() => SettingsState();
+  State<SettingsWidget> createState() => _SettingsState();
 }
 
-class SettingsState extends State<SettingsWidget> {
+class _SettingsState extends State<SettingsWidget> {
   static const keyDarkMode = 'key-dark-mode';
   @override
   Widget build(BuildContext context) => Scaffold(
