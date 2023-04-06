@@ -67,7 +67,7 @@ class RSS {
 
   // filter is one of Experience, EventType, Topic, or Audience
   Future<String> getRSSFeed(filter) async {
-    var response = await http.get(Uri.parse('$url${filter.get}'));
+    var response = await http.get(Uri.parse('$url${filter.get()}'));
     if (response.statusCode == 200) {
       return response.body;
     } else {
