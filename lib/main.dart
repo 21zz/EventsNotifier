@@ -19,6 +19,10 @@ enum NotifyBefore {
   week1Before
 }
 
+enum DarkMode {
+  darkmode
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Settings.init(
@@ -34,7 +38,7 @@ class MUApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueChangeObserver<bool>(
-      cacheKey: SettingsWidget.keyDarkMode,
+      cacheKey: DarkMode.darkmode.name,
       defaultValue: false,
       builder: (_, isDarkMode, __) => MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -141,13 +145,11 @@ class Feed extends StatelessWidget {
 
 class SettingsWidget extends StatefulWidget {
   const SettingsWidget({super.key});
-  static const keyDarkMode = _SettingsState.keyDarkMode;
   @override
   State<SettingsWidget> createState() => _SettingsState();
 }
 
 class _SettingsState extends State<SettingsWidget> {
-  static const keyDarkMode = 'key-dark-mode';
   @override
   Widget build(BuildContext context) => Scaffold(
       body: SafeArea (
@@ -169,7 +171,7 @@ class _SettingsState extends State<SettingsWidget> {
   Widget buildDarkMode() => SwitchSettingsTile(
       title: "Dark Mode",
       leading: const Icon(Icons.dark_mode),
-      settingKey: keyDarkMode,
+      settingKey: DarkMode.darkmode.name,
       defaultValue: false
   );
 
