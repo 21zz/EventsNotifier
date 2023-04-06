@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'util/filters.dart';
 import 'util/rss.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 
@@ -20,7 +19,7 @@ enum NotifyBefore {
 }
 
 enum DarkMode {
-  darkmode
+  darkMode
 }
 
 void main() async {
@@ -38,7 +37,7 @@ class MUApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueChangeObserver<bool>(
-      cacheKey: DarkMode.darkmode.name,
+      cacheKey: DarkMode.darkMode.name,
       defaultValue: false,
       builder: (_, isDarkMode, __) => MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -65,11 +64,20 @@ class _NavigationState extends State<Navigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: [
+          const Icon(Icons.event),
+          const IconButton(
+            icon: Icon(Icons.filter_alt_outlined),
+            onPressed: null // _showFilters()
+          ),
+          const Icon(Icons.settings)
+        ][currentPageIndex],
           title: <Text>[
           const Text("Events"),
           const Text("Feed"),
           const Text("Settings")
-        ][currentPageIndex]
+        ][currentPageIndex],
+
       ),
       bottomNavigationBar: NavigationBar(
         onDestinationSelected: (int index) {
@@ -171,7 +179,7 @@ class _SettingsState extends State<SettingsWidget> {
   Widget buildDarkMode() => SwitchSettingsTile(
       title: "Dark Mode",
       leading: const Icon(Icons.dark_mode),
-      settingKey: DarkMode.darkmode.name,
+      settingKey: DarkMode.darkMode.name,
       defaultValue: false
   );
 
@@ -250,7 +258,7 @@ class _SettingsState extends State<SettingsWidget> {
   );
   Widget build4HoursBefore() => SwitchSettingsTile(
       settingKey: NotifyBefore.hour4Before.name,
-      title: "15 minutes before",
+      title: "4 hours before",
       defaultValue: false,
       onChange: (settingKey) {}
   );
