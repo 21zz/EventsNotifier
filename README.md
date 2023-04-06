@@ -1,4 +1,4 @@
-# marshall_event_notifier
+# Events Notifier
 
 Event notifier for Marshall University
 
