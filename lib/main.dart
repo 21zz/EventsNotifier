@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'data_providers/filters.dart';
-import 'data_providers/rss.dart';
+import 'util/filters.dart';
+import 'util/rss.dart';
 import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 
 enum NotifyBefore {
