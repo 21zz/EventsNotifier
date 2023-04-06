@@ -29,7 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   http: ^0.13.5
-  webfeed: ^0.7.0
+  xml: ^5.4.1
   flutter_settings_screens: ^0.3.3-null-safety+2
   flutter:
     sdk: flutter
