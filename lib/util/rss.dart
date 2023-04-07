@@ -7,6 +7,7 @@ enum Experience {
   none('');
 
   const Experience(this.type);
+
   final String type;
 
   String get() {
@@ -22,6 +23,7 @@ enum EventType {
   athletics('42048192045827');
 
   const EventType(this.type);
+
   final String type;
 
   String get() {
@@ -37,6 +39,7 @@ enum Topic {
   scienceAndTechnology('42048198253275');
 
   const Topic(this.type);
+
   final String type;
 
   String get() {
@@ -52,6 +55,7 @@ enum Audience {
   prospectiveStudents('42048202639325');
 
   const Audience(this.type);
+
   final String type;
 
   String get() {
@@ -59,15 +63,15 @@ enum Audience {
   }
 }
 
-
 class RSS {
   final String url = 'https://events.marshall.edu/calendar.xml';
-  String urlFilter = '';
+  List filterList = [];
+
   RSS();
 
   // filter is one of Experience, EventType, Topic, or Audience
-  Future<String> getRSSFeed(filter) async {
-    var response = await http.get(Uri.parse('$url${filter.get()}'));
+  Future<String> getRSSFeed() async {
+    var response = await http.get(Uri.parse('$url$getFilter'));
     if (response.statusCode == 200) {
       return response.body;
     } else {
@@ -76,20 +80,32 @@ class RSS {
   }
 
   void addFilter(filter) {
-    if (urlFilter.compareTo('') == 0) {
-      urlFilter += '?${filter.get()}';
-    } else {
-      urlFilter += '&${filter.get()}';
+    if (filterList.contains('${filter.get()}')) {
+      return;
     }
+    filterList.add('${filter.get()}');
   }
 
-    String get get {
-      if (urlFilter.compareTo('') == 0) {
-        // if the filter is empty, you have to add an empty "?experience=" a
-        // the end for some reason...
-        return '?${Experience.none.get()}';
-      }
-      return urlFilter;
+  void removeFilter(filter) {
+    if (filterList.contains('${filter.get()}')) {
+      return;
     }
+    filterList.removeAt(filterList.indexOf('${filter.get()}'));
   }
 
+  String get getFilter {
+    if (filterList.isEmpty) {
+      // if the filter is empty, you have to add an empty
+      // ?experience=
+      // at the end for some reason...
+      return '?${Experience.none.get()}';
+    }
+    String filterString = '';
+    for (var i = 0; i < filterList.length; i++) {
+      i == 0
+          ? filterString += '?${filterList[i]}'
+          : filterString += '&${filterList[i]}';
+    }
+    return filterString;
+  }
+}
