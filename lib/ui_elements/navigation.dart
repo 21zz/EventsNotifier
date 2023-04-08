@@ -3,6 +3,7 @@ import 'package:marshall_event_notifier/ui_elements/settings.dart';
 import 'package:marshall_event_notifier/ui_elements/events.dart';
 import 'package:marshall_event_notifier/ui_elements/feed.dart';
 import 'package:marshall_event_notifier/util/rss.dart';
+import 'package:xml/xml.dart';
 
 enum DialogsAction { ok, cancel }
 
@@ -38,7 +39,6 @@ class _NavigationState extends State<Navigation> {
   bool? alumniChecked = false;
   bool? generalPublicChecked = false;
   bool? prospectiveStudentsChecked = false;
-
 
   buildFeed() async {
     var ff = FeedFilter();
@@ -93,8 +93,40 @@ class _NavigationState extends State<Navigation> {
         ? ff.addAudience(Audience.students)
         : ff.removeAudience(Audience.students);
 
+    // build rss from the filter
     var rss = ff.buildRSSFromFilter();
-    print(rss.url);
+    debugPrint('built RSS from filter');
+    debugPrint('${rss.url}${rss.getFilter}');
+    // get the feed as text
+    var feed = await rss.getRSSFeed();
+    debugPrint('got RSS Feed');
+    // parse XML
+    var document = XmlDocument.parse(feed);
+    debugPrint('awaited feed and parsed XML');
+    // get the element with children <item>
+    var root = document.findElements('rss').first.findElements('channel').first;
+    // list of each item aka list of events
+    var events = root.findElements('item');
+    // go through each event and build objects to put into feed
+    for(var event in events) {
+      var title = event.findElements('title');
+      var description = event.findElements('description');
+      var link = event.findElements('link');
+      var locationLat = event.findElements('geo:lat');
+      var locationLong = event.findElements('geo:long');
+      var publicationDate = event.findElements('pubDate');
+      var mediaContent = event.findElements('media:content');
+      debugPrint("------------------\nEVENT\n------------------");
+      title.isEmpty ? debugPrint('${title.first}') : null;
+      description.isEmpty ? debugPrint('${description.first}') : null;
+      link.isEmpty ? debugPrint('${link.first}') : null;
+      locationLat.isEmpty ? debugPrint('${locationLat.first}') : null;
+      locationLong.isEmpty ? debugPrint('${locationLong.first}') : null;
+      publicationDate.isEmpty ? debugPrint('${publicationDate.first}') : null;
+      mediaContent.isEmpty ? debugPrint('${mediaContent.first}') : null;
+      debugPrint("------------------");
+      debugPrint('');
+    }
   }
 
   @override
@@ -110,8 +142,7 @@ class _NavigationState extends State<Navigation> {
                     context: context,
                     builder: (BuildContext ctx) {
                       return AlertDialog(
-                          contentPadding:
-                              const EdgeInsets.only(left: 25, right: 25),
+                          contentPadding: const EdgeInsets.all(30),
                           scrollable: true,
                           title: const Center(child: Text("Filter")),
                           actions: <Widget>[
@@ -127,7 +158,7 @@ class _NavigationState extends State<Navigation> {
                               onPressed: () {
                                 buildFeed();
                                 Navigator.of(context).pop(DialogsAction.ok);
-                                },
+                              },
                               child: const Text(
                                 "OK",
                                 style: TextStyle(color: Colors.blue),
@@ -136,28 +167,33 @@ class _NavigationState extends State<Navigation> {
                           ],
                           content: SingleChildScrollView(
                               child: Column(children: [
-                            Row(children: const <Widget>[Text("Experience")]),
+                            Row(children: const <Widget>[Text("Experience", style: TextStyle(color: Colors.blue),)]),
                             Row(children: <Widget>[
                               StatefulBuilder(
-                                builder: (context, setState) =>
-                                    DropdownButton(
-                                      items: const [
-                                        DropdownMenuItem(child: Text("In-person"), value: Experience.inPerson),
-                                        DropdownMenuItem(child: Text("Virtual"), value: Experience.virtual),
-                                        DropdownMenuItem(child: Text("None"), value: Experience.none)
-                                      ],
-                                      value: experience,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          experience = value!;
-                                        });
-                                      },
-
-                                    )
-                              )
+                                  builder: (context, setState) =>
+                                      DropdownButton(
+                                        items: const [
+                                          DropdownMenuItem(
+                                              value: Experience.inPerson,
+                                              child: Text("In-person")),
+                                          DropdownMenuItem(
+                                              value: Experience.virtual,
+                                              child: Text("Virtual")),
+                                          DropdownMenuItem(
+                                              value: Experience.none,
+                                              child: Text("Both"))
+                                        ],
+                                        value: experience,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            experience = value!;
+                                          });
+                                        },
+                                        itemHeight: 48,
+                                      ))
                             ]),
                             Row(children: const <Widget>[Text("")]),
-                            Row(children: const <Widget>[Text("Event Type")]),
+                            Row(children: const <Widget>[Text("Event Type", style: TextStyle(color: Colors.blue),)]),
                             Row(children: <Widget>[
                               Expanded(
                                   child: StatefulBuilder(
@@ -165,12 +201,15 @@ class _NavigationState extends State<Navigation> {
                                           CheckboxListTile(
                                               title: const Text(
                                                   "Workshops & Conferences"),
-                                              value: workshopsAndConferencesChecked,
+                                              value:
+                                                  workshopsAndConferencesChecked,
                                               onChanged: (value) {
                                                 setState(() {
-                                                  workshopsAndConferencesChecked = value!;
+                                                  workshopsAndConferencesChecked =
+                                                      value!;
                                                 });
-                                              })))
+                                              },
+                                          contentPadding: EdgeInsets.zero)))
                             ]),
                             Row(children: [
                               Expanded(
@@ -183,8 +222,8 @@ class _NavigationState extends State<Navigation> {
                                                 setState(() {
                                                   receptionsChecked = value!;
                                                 });
-                                              })))
-                            ]),
+                                              },contentPadding: EdgeInsets.zero)))
+                            ]), // receptions
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
@@ -198,8 +237,8 @@ class _NavigationState extends State<Navigation> {
                                                   meetingsAndLecturesChecked =
                                                       value!;
                                                 });
-                                              })))
-                            ]),
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // meetings and lectures
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
@@ -207,13 +246,15 @@ class _NavigationState extends State<Navigation> {
                                           CheckboxListTile(
                                               title: const Text(
                                                   "Concerts & Performances"),
-                                              value: concertsAndPerformancesChecked,
+                                              value:
+                                                  concertsAndPerformancesChecked,
                                               onChanged: (value) {
                                                 setState(() {
-                                                  concertsAndPerformancesChecked = value!;
+                                                  concertsAndPerformancesChecked =
+                                                      value!;
                                                 });
-                                              })))
-                            ]),
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // concert and performances
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
@@ -225,8 +266,155 @@ class _NavigationState extends State<Navigation> {
                                                 setState(() {
                                                   athleticsChecked = value!;
                                                 });
-                                              }))),
-                            ])
+                                              },contentPadding: EdgeInsets.zero,))),
+                            ]), // athletics
+                            Row(children: const <Widget>[Text("")]),
+                            Row(children: const <Widget>[Text("Topic", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text("Academic"),
+                                              value: academicChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  academicChecked = value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), //academic
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title:
+                                                  const Text("Arts & Culture"),
+                                              value: artsAndCultureChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  artsAndCultureChecked =
+                                                      value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // arts & culture
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text(
+                                                  "Health & Wellness"),
+                                              value: healthAndWellnessChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  healthAndWellnessChecked =
+                                                      value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,))),
+                            ]), // health & wellness
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text("Research"),
+                                              value: researchChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  researchChecked = value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // research
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text(
+                                                  "Science & Technology"),
+                                              value:
+                                                  scienceAndTechnologyChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  scienceAndTechnologyChecked =
+                                                      value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // science & technology
+                            Row(children: const <Widget>[Text("")]),
+                            Row(children: const <Widget>[Text("Audience", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text("Students"),
+                                              value: studentsChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  studentsChecked = value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // students
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title:
+                                                  const Text("Faculty & Staff"),
+                                              value: facultyAndStaffChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  facultyAndStaffChecked =
+                                                      value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // faculty & staff
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text("Alumni"),
+                                              value: alumniChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  alumniChecked = value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // alumni
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title:
+                                                  const Text("General Public"),
+                                              value: generalPublicChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  generalPublicChecked = value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,)))
+                            ]), // general public
+                            Row(children: [
+                              Expanded(
+                                  child: StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          CheckboxListTile(
+                                              title: const Text(
+                                                  "Prospective Students"),
+                                              value: prospectiveStudentsChecked,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  prospectiveStudentsChecked =
+                                                      value!;
+                                                });
+                                              },contentPadding: EdgeInsets.zero,
+                                          )))
+                            ]), // prospective students
                           ])));
                     });
               }),
