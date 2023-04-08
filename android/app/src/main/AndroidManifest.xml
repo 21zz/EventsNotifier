@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.team3.marshall_event_notifier">
     <uses-permission android:name="android.permission.INTERNET" />
-   <application
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <application
         android:label="marshall_event_notifier"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
