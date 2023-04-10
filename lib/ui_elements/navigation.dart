@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:marshall_event_notifier/ui_elements/settings.dart';
-import 'package:marshall_event_notifier/ui_elements/events.dart';
-import 'package:marshall_event_notifier/ui_elements/feed.dart';
 import 'package:marshall_event_notifier/util/rss.dart';
 import 'package:xml/xml.dart';
 
@@ -15,6 +13,8 @@ class Navigation extends StatefulWidget {
 }
 
 class _NavigationState extends State<Navigation> {
+  var feedItems = [];
+  var eventItems = [];
   int currentPageIndex = 0;
 
   Experience experience = Experience.none;
@@ -41,7 +41,13 @@ class _NavigationState extends State<Navigation> {
   bool? prospectiveStudentsChecked = false;
 
   buildFeed(context) async {
-
+    if (feedItems.isNotEmpty) {
+      while (feedItems.isNotEmpty) {
+        setState(() {
+          feedItems.removeLast();
+        });
+      }
+    }
     var ff = FeedFilter();
     // Experience
     ff.setExperience(experience);
@@ -109,10 +115,12 @@ class _NavigationState extends State<Navigation> {
     // list of each item aka list of events
     var events = root.findElements('item');
     // go through each event and build objects to put into feed
-    if(events.isEmpty) {
+    if (events.isEmpty) {
       showEmpty(context);
+      return;
     }
-    for(var event in events) {
+    for (var event in events) {
+      var feedItemData = FeedItemData();
       var title = event.findElements('title');
       var description = event.findElements('description');
       var link = event.findElements('link');
@@ -120,35 +128,47 @@ class _NavigationState extends State<Navigation> {
       var locationLong = event.findElements('geo:long');
       var publicationDate = event.findElements('pubDate');
       var mediaContent = event.findElements('media:content');
-      debugPrint("------------------\nEVENT\n------------------");
-      title.isEmpty ? null : debugPrint('${title.first}');
-      description.isEmpty ? null : debugPrint('${description.first}');
-      link.isEmpty ? null : debugPrint('${link.first}');
-      locationLat.isEmpty ? null : debugPrint('${locationLat.first}');
-      locationLong.isEmpty ? null : debugPrint('${locationLong.first}');
-      publicationDate.isEmpty ? null : debugPrint('${publicationDate.first}');
-      mediaContent.isEmpty ? null : debugPrint('${mediaContent.first}');
-      debugPrint("------------------");
-      debugPrint('');
+      title.isEmpty ? null : feedItemData.title = title.first.innerText;
+      description.isEmpty
+          ? null
+          : feedItemData.description = description.first.innerText;
+      link.isEmpty ? null : feedItemData.link = link.first.innerText;
+      locationLat.isEmpty
+          ? null
+          : feedItemData.locationLat = locationLat.first.innerText;
+      locationLong.isEmpty
+          ? null
+          : feedItemData.locationLong = locationLong.first.innerText;
+      publicationDate.isEmpty
+          ? null
+          : feedItemData.publicationDate = publicationDate.first.innerText;
+      mediaContent.isEmpty
+          ? null
+          : feedItemData.mediaContent = mediaContent.first.innerText;
+      setState(() {
+        feedItems.add(feedItemData);
+      });
     }
   }
 
   showEmpty(context) {
     showDialog(
-      context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          contentPadding: const EdgeInsets.all(15),
-          scrollable: false,
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: const <Widget>[
-              Text("No events found for the filter.")
-            ],
-          )
-        );
-      }
-    );
+        context: context,
+        builder: (BuildContext ctx) {
+          return AlertDialog(
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(10.0)),
+              ),
+              contentPadding: const EdgeInsets.all(15),
+              scrollable: false,
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: const <Widget>[
+                  Text("No events found for current filter.")
+                ],
+              ));
+        });
   }
 
   @override
@@ -164,6 +184,10 @@ class _NavigationState extends State<Navigation> {
                     context: context,
                     builder: (BuildContext ctx) {
                       return AlertDialog(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10.0)),
+                          ),
                           contentPadding: const EdgeInsets.all(30),
                           scrollable: true,
                           title: const Center(child: Text("Filter")),
@@ -189,7 +213,12 @@ class _NavigationState extends State<Navigation> {
                           ],
                           content: SingleChildScrollView(
                               child: Column(children: [
-                            Row(children: const <Widget>[Text("Experience", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: const <Widget>[
+                              Text(
+                                "Experience",
+                                style: TextStyle(color: Colors.blue),
+                              )
+                            ]),
                             Row(children: <Widget>[
                               StatefulBuilder(
                                   builder: (context, setState) =>
@@ -215,7 +244,12 @@ class _NavigationState extends State<Navigation> {
                                       ))
                             ]),
                             Row(children: const <Widget>[Text("")]),
-                            Row(children: const <Widget>[Text("Event Type", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: const <Widget>[
+                              Text(
+                                "Event Type",
+                                style: TextStyle(color: Colors.blue),
+                              )
+                            ]),
                             Row(children: <Widget>[
                               Expanded(
                                   child: StatefulBuilder(
@@ -231,7 +265,7 @@ class _NavigationState extends State<Navigation> {
                                                       value!;
                                                 });
                                               },
-                                          contentPadding: EdgeInsets.zero)))
+                                              contentPadding: EdgeInsets.zero)))
                             ]),
                             Row(children: [
                               Expanded(
@@ -244,197 +278,228 @@ class _NavigationState extends State<Navigation> {
                                                 setState(() {
                                                   receptionsChecked = value!;
                                                 });
-                                              },contentPadding: EdgeInsets.zero)))
+                                              },
+                                              contentPadding: EdgeInsets.zero)))
                             ]), // receptions
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text(
-                                                  "Meetings & Lectures"),
-                                              value: meetingsAndLecturesChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  meetingsAndLecturesChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text(
+                                                "Meetings & Lectures"),
+                                            value: meetingsAndLecturesChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                meetingsAndLecturesChecked =
+                                                    value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // meetings and lectures
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text(
-                                                  "Concerts & Performances"),
-                                              value:
-                                                  concertsAndPerformancesChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  concertsAndPerformancesChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text(
+                                                "Concerts & Performances"),
+                                            value:
+                                                concertsAndPerformancesChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                concertsAndPerformancesChecked =
+                                                    value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // concert and performances
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text("Athletics"),
-                                              value: athleticsChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  athleticsChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,))),
+                                            title: const Text("Athletics"),
+                                            value: athleticsChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                athleticsChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          ))),
                             ]), // athletics
                             Row(children: const <Widget>[Text("")]),
-                            Row(children: const <Widget>[Text("Topic", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: const <Widget>[
+                              Text(
+                                "Topic",
+                                style: TextStyle(color: Colors.blue),
+                              )
+                            ]),
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text("Academic"),
-                                              value: academicChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  academicChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("Academic"),
+                                            value: academicChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                academicChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), //academic
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title:
-                                                  const Text("Arts & Culture"),
-                                              value: artsAndCultureChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  artsAndCultureChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("Arts & Culture"),
+                                            value: artsAndCultureChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                artsAndCultureChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // arts & culture
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text(
-                                                  "Health & Wellness"),
-                                              value: healthAndWellnessChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  healthAndWellnessChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,))),
+                                            title:
+                                                const Text("Health & Wellness"),
+                                            value: healthAndWellnessChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                healthAndWellnessChecked =
+                                                    value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          ))),
                             ]), // health & wellness
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text("Research"),
-                                              value: researchChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  researchChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("Research"),
+                                            value: researchChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                researchChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // research
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text(
-                                                  "Science & Technology"),
-                                              value:
-                                                  scienceAndTechnologyChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  scienceAndTechnologyChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text(
+                                                "Science & Technology"),
+                                            value: scienceAndTechnologyChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                scienceAndTechnologyChecked =
+                                                    value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // science & technology
                             Row(children: const <Widget>[Text("")]),
-                            Row(children: const <Widget>[Text("Audience", style: TextStyle(color: Colors.blue),)]),
+                            Row(children: const <Widget>[
+                              Text(
+                                "Audience",
+                                style: TextStyle(color: Colors.blue),
+                              )
+                            ]),
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text("Students"),
-                                              value: studentsChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  studentsChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("Students"),
+                                            value: studentsChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                studentsChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // students
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title:
-                                                  const Text("Faculty & Staff"),
-                                              value: facultyAndStaffChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  facultyAndStaffChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title:
+                                                const Text("Faculty & Staff"),
+                                            value: facultyAndStaffChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                facultyAndStaffChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // faculty & staff
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text("Alumni"),
-                                              value: alumniChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  alumniChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("Alumni"),
+                                            value: alumniChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                alumniChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // alumni
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title:
-                                                  const Text("General Public"),
-                                              value: generalPublicChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  generalPublicChecked = value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,)))
+                                            title: const Text("General Public"),
+                                            value: generalPublicChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                generalPublicChecked = value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
+                                          )))
                             ]), // general public
                             Row(children: [
                               Expanded(
                                   child: StatefulBuilder(
                                       builder: (context, setState) =>
                                           CheckboxListTile(
-                                              title: const Text(
-                                                  "Prospective Students"),
-                                              value: prospectiveStudentsChecked,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  prospectiveStudentsChecked =
-                                                      value!;
-                                                });
-                                              },contentPadding: EdgeInsets.zero,
+                                            title: const Text(
+                                                "Prospective Students"),
+                                            value: prospectiveStudentsChecked,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                prospectiveStudentsChecked =
+                                                    value!;
+                                              });
+                                            },
+                                            contentPadding: EdgeInsets.zero,
                                           )))
                             ]), // prospective students
                           ])));
@@ -471,8 +536,48 @@ class _NavigationState extends State<Navigation> {
         ],
       ),
       body: <Widget>[
-        const Events(),
-        const Feed(),
+        const CustomScrollView(
+            slivers: <Widget>[SliverFillRemaining(child: FlutterLogo())]),
+        CustomScrollView(slivers: <Widget>[
+          SliverList(
+              delegate: SliverChildBuilderDelegate(
+            (BuildContext ctx, int index) {
+              return Container(
+                  alignment: Alignment.center,
+                  color: Colors.blue[200 + index % 4 * 100],
+                  height: 100,
+                  padding: const EdgeInsets.all(15),
+                  child: InkWell(
+                      onTap: () {
+                        (BuildContext ctx2) {
+                          return AlertDialog(
+                              title: Text(feedItems[0].title,
+                                  overflow: TextOverflow.visible),
+                              contentPadding: const EdgeInsets.all(15),
+                              scrollable: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10.0)),
+                              ),
+                              content: const Text("what"));
+                        };
+                      },
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(feedItems[index].title,
+                                    overflow: TextOverflow.visible),
+                              )
+                            ],
+                          )
+                        ],
+                      )));
+            },
+            childCount: feedItems.length,
+          )),
+        ]),
         const SettingsWidget(),
       ][currentPageIndex],
     );
@@ -563,4 +668,16 @@ class FeedFilter {
     }
     return rss;
   }
+}
+
+class FeedItemData {
+  String? title;
+  String? description;
+  String? link;
+  String? locationLat;
+  String? locationLong;
+  String? publicationDate;
+  String? mediaContent;
+
+  FeedItemData();
 }

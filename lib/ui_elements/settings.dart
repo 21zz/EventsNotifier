@@ -30,9 +30,9 @@ class _SettingsState extends State<SettingsWidget> {
   Widget build(BuildContext context) => Scaffold(
           body: SafeArea(
               child: ListView(padding: const EdgeInsets.all(15), children: [
-        buildDarkMode(),
-        SettingsGroup(
-            title: "General", children: <Widget>[buildNotifySettings()])
+                buildDarkMode(),
+                SettingsGroup(
+                    title: "General", children: <Widget>[buildNotifySettings()])
       ])));
 
   Widget buildDarkMode() => SwitchSettingsTile(
