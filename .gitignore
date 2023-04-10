@@ -9,7 +9,7 @@
 .history
 .svn/
 migrate_working_dir/
-store.jks
+android/app/store.jks
 key.properties
 
 # IntelliJ related
