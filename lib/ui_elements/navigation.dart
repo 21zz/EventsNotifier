@@ -40,7 +40,8 @@ class _NavigationState extends State<Navigation> {
   bool? generalPublicChecked = false;
   bool? prospectiveStudentsChecked = false;
 
-  buildFeed() async {
+  buildFeed(context) async {
+
     var ff = FeedFilter();
     // Experience
     ff.setExperience(experience);
@@ -108,6 +109,9 @@ class _NavigationState extends State<Navigation> {
     // list of each item aka list of events
     var events = root.findElements('item');
     // go through each event and build objects to put into feed
+    if(events.isEmpty) {
+      showEmpty(context);
+    }
     for(var event in events) {
       var title = event.findElements('title');
       var description = event.findElements('description');
@@ -117,16 +121,34 @@ class _NavigationState extends State<Navigation> {
       var publicationDate = event.findElements('pubDate');
       var mediaContent = event.findElements('media:content');
       debugPrint("------------------\nEVENT\n------------------");
-      title.isEmpty ? debugPrint('${title.first}') : null;
-      description.isEmpty ? debugPrint('${description.first}') : null;
-      link.isEmpty ? debugPrint('${link.first}') : null;
-      locationLat.isEmpty ? debugPrint('${locationLat.first}') : null;
-      locationLong.isEmpty ? debugPrint('${locationLong.first}') : null;
-      publicationDate.isEmpty ? debugPrint('${publicationDate.first}') : null;
-      mediaContent.isEmpty ? debugPrint('${mediaContent.first}') : null;
+      title.isEmpty ? null : debugPrint('${title.first}');
+      description.isEmpty ? null : debugPrint('${description.first}');
+      link.isEmpty ? null : debugPrint('${link.first}');
+      locationLat.isEmpty ? null : debugPrint('${locationLat.first}');
+      locationLong.isEmpty ? null : debugPrint('${locationLong.first}');
+      publicationDate.isEmpty ? null : debugPrint('${publicationDate.first}');
+      mediaContent.isEmpty ? null : debugPrint('${mediaContent.first}');
       debugPrint("------------------");
       debugPrint('');
     }
+  }
+
+  showEmpty(context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          contentPadding: const EdgeInsets.all(15),
+          scrollable: false,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: const <Widget>[
+              Text("No events found for the filter.")
+            ],
+          )
+        );
+      }
+    );
   }
 
   @override
@@ -156,7 +178,7 @@ class _NavigationState extends State<Navigation> {
                             ),
                             TextButton(
                               onPressed: () {
-                                buildFeed();
+                                buildFeed(context);
                                 Navigator.of(context).pop(DialogsAction.ok);
                               },
                               child: const Text(
