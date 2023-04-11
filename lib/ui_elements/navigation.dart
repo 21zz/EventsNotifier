@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:marshall_event_notifier/ui_elements/settings.dart';
 import 'package:marshall_event_notifier/util/rss.dart';
+import 'package:transparent_image/transparent_image.dart';
 import 'package:xml/xml.dart';
 
 enum DialogsAction { ok, cancel }
@@ -144,7 +145,7 @@ class _NavigationState extends State<Navigation> {
           : feedItemData.publicationDate = publicationDate.first.innerText;
       mediaContent.isEmpty
           ? null
-          : feedItemData.mediaContent = mediaContent.first.innerText;
+          : feedItemData.mediaContent = mediaContent.first.getAttribute("url");
       setState(() {
         feedItems.add(feedItemData);
       });
@@ -178,7 +179,7 @@ class _NavigationState extends State<Navigation> {
         leading: [
           const Icon(Icons.event),
           IconButton(
-              icon: const Icon(Icons.filter_alt_outlined),
+              icon: const Icon(Icons.refresh_outlined),
               onPressed: () async {
                 showDialog(
                     context: context,
@@ -544,34 +545,69 @@ class _NavigationState extends State<Navigation> {
             (BuildContext ctx, int index) {
               return Container(
                   alignment: Alignment.center,
-                  color: Colors.blue[200 + index % 4 * 100],
-                  height: 100,
+                  height: 120,
                   padding: const EdgeInsets.all(15),
                   child: InkWell(
                       onTap: () {
-                        (BuildContext ctx2) {
-                          return AlertDialog(
-                              title: Text(feedItems[0].title,
-                                  overflow: TextOverflow.visible),
-                              contentPadding: const EdgeInsets.all(15),
-                              scrollable: true,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10.0)),
-                              ),
-                              content: const Text("what"));
-                        };
+                        // TODO: remove
+                        debugPrint('tapped');
+                        showDialog(
+                            context: context,
+                            builder: (BuildContext ctx2) {
+                              return AlertDialog(
+                                  contentPadding: const EdgeInsets.all(15),
+                                  scrollable: true,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(10.0)),
+                                  ),
+                                  content: SingleChildScrollView(
+                                      child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 400),
+                                    child: Column(
+                                      children: <Widget>[
+                                        Flexible(
+                                            flex: 1,
+                                            fit: FlexFit.loose,
+                                            child: Row(
+                                              children: <Widget>[
+                                                Expanded(
+                                                    child: Text(
+                                                        feedItems[index].title,
+                                                        style: const TextStyle(
+                                                            fontSize: 16)))
+                                              ],
+                                            ))
+                                      ],
+                                    ),
+                                  )));
+                            });
                       },
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Expanded(
+                              child: Row(
                             children: [
-                              Flexible(
-                                child: Text(feedItems[index].title,
-                                    overflow: TextOverflow.visible),
+                              Expanded(
+                                flex: 1,
+                                child: FadeInImage.memoryNetwork(
+                                    fit: BoxFit.fitHeight,
+                                    image: feedItems[index].mediaContent,
+                                    placeholder: kTransparentImage),
+                              ),
+                              Expanded(
+                                child: Column(children: [
+                                  Expanded(
+                                    child: Text(feedItems[index].title,
+                                        overflow: TextOverflow.visible,
+                                        style: const TextStyle(fontSize: 13)),
+                                  )
+                                ]),
                               )
-                            ],
-                          )
+                            ]
+                          ))
                         ],
                       )));
             },
