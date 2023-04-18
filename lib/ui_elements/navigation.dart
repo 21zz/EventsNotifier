@@ -9,7 +9,6 @@ import 'package:marshall_event_notifier/util/storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:isar/isar.dart';
 
-
 enum DialogsAction { ok, cancel }
 
 class Navigation extends StatefulWidget {
@@ -54,7 +53,6 @@ class _NavigationState extends State<Navigation> {
     _getIsar();
   }
 
-
   _getIsar() async {
     final dir = await getApplicationDocumentsDirectory();
     _isar = await Isar.open(
@@ -66,12 +64,12 @@ class _NavigationState extends State<Navigation> {
 
   buildEvents() async {
     var events = await _isar!.feedItemDataIsars.where().findAll();
-    if(events.isEmpty) {
+    if (events.isEmpty) {
       return;
     }
     // clear current list
-    while(eventItems.isNotEmpty) {
-    setState(() {
+    while (eventItems.isNotEmpty) {
+      setState(() {
         eventItems.removeLast();
       });
     }
@@ -617,121 +615,119 @@ class _NavigationState extends State<Navigation> {
         CustomScrollView(slivers: <Widget>[
           SliverList(
               delegate: SliverChildBuilderDelegate(
-                    (BuildContext ctx, int index) {
-                  return Container(
-                      alignment: Alignment.center,
-                      height: 120,
-                      padding: const EdgeInsets.all(15),
-                      child: InkWell(
-                          onTap: () {
-                            showDialog(
-                                context: context,
-                                builder: (BuildContext ctx2) {
-                                  return AlertDialog(
-                                      contentPadding: const EdgeInsets.all(15),
-                                      scrollable: false,
-                                      shape: const RoundedRectangleBorder(
-                                        borderRadius:
+            (BuildContext ctx, int index) {
+              return Container(
+                  alignment: Alignment.center,
+                  height: 120,
+                  padding: const EdgeInsets.all(15),
+                  child: InkWell(
+                      onTap: () {
+                        showDialog(
+                            context: context,
+                            builder: (BuildContext ctx2) {
+                              return AlertDialog(
+                                  contentPadding: const EdgeInsets.all(15),
+                                  scrollable: false,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius:
                                         BorderRadius.all(Radius.circular(10.0)),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context)
+                                          .pop(DialogsAction.cancel),
+                                      child: const Text(
+                                        "Cancel",
+                                        style: TextStyle(color: Colors.red),
                                       ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context)
-                                              .pop(DialogsAction.cancel),
-                                          child: const Text(
-                                            "Cancel",
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(DialogsAction.ok);
-                                          },
-                                          child: const Text(
-                                            "Ok",
-                                            style: TextStyle(color: Colors.blue),
-                                          ),
-                                        )
-                                      ],
-                                      content: ConstrainedBox(
-                                        constraints:
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context)
+                                            .pop(DialogsAction.ok);
+                                      },
+                                      child: const Text(
+                                        "Ok",
+                                        style: TextStyle(color: Colors.blue),
+                                      ),
+                                    )
+                                  ],
+                                  content: ConstrainedBox(
+                                    constraints:
                                         const BoxConstraints(maxHeight: 1000),
-                                        child: Column(
-                                          children: <Widget>[
-                                            Flexible(
-                                                flex: 1,
-                                                fit: FlexFit.loose,
-                                                child: Row(children: [
-                                                  Expanded(
-                                                      child: Text(
-                                                          eventItems[index].title +
-                                                              '\n',
-                                                          textAlign:
+                                    child: Column(
+                                      children: <Widget>[
+                                        Flexible(
+                                            flex: 1,
+                                            fit: FlexFit.loose,
+                                            child: Row(children: [
+                                              Expanded(
+                                                  child: Text(
+                                                      eventItems[index].title +
+                                                          '\n',
+                                                      textAlign:
                                                           TextAlign.center,
-                                                          style: const TextStyle(
-                                                              fontSize: 20,
-                                                              fontWeight:
+                                                      style: const TextStyle(
+                                                          fontSize: 20,
+                                                          fontWeight:
                                                               FontWeight.bold)))
-                                                ])),
-                                            Flexible(
-                                                flex: 0,
-                                                fit: FlexFit.loose,
-                                                child: Row(
-                                                  children: <Widget>[
-                                                    Expanded(
-                                                        child: Image.network(
-                                                            eventItems[index]
-                                                                .mediaContent)),
-                                                  ],
-                                                )),
-                                            Flexible(
-                                                flex: 1,
-                                                fit: FlexFit.tight,
-                                                child: Row(
-                                                  children: [
-                                                    Expanded(
-                                                        child:
+                                            ])),
+                                        Flexible(
+                                            flex: 0,
+                                            fit: FlexFit.loose,
+                                            child: Row(
+                                              children: <Widget>[
+                                                Expanded(
+                                                    child: Image.network(
+                                                        eventItems[index]
+                                                            .mediaContent)),
+                                              ],
+                                            )),
+                                        Flexible(
+                                            flex: 1,
+                                            fit: FlexFit.tight,
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                    child:
                                                         SingleChildScrollView(
                                                             child: giveHtml(
                                                                 index)))
-                                                  ],
-                                                ))
-                                          ],
-                                        ),
-                                      ));
-                                });
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                  child: Row(children: [
-                                    Expanded(
-                                      flex: 1,
-                                      child: FadeInImage.memoryNetwork(
-                                          fit: BoxFit.fitHeight,
-                                          image: eventItems[index].mediaContent,
-                                          placeholder: kTransparentImage),
+                                              ],
+                                            ))
+                                      ],
                                     ),
-                                    Expanded(
-                                      child: Column(children: [
-                                        Expanded(
-                                          child: Text(eventItems[index].title,
-                                              overflow: TextOverflow.visible,
-                                              style: const TextStyle(fontSize: 13)),
-                                        )
-                                      ]),
-                                    )
-                                  ]))
-                            ],
-                          )));
-                },
-                childCount: eventItems.length,
-              )),
+                                  ));
+                            });
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                              child: Row(children: [
+                            Expanded(
+                              flex: 1,
+                              child: FadeInImage.memoryNetwork(
+                                  fit: BoxFit.fitHeight,
+                                  image: eventItems[index].mediaContent,
+                                  placeholder: kTransparentImage),
+                            ),
+                            Expanded(
+                              child: Column(children: [
+                                Expanded(
+                                  child: Text(eventItems[index].title,
+                                      overflow: TextOverflow.visible,
+                                      style: const TextStyle(fontSize: 13)),
+                                )
+                              ]),
+                            )
+                          ]))
+                        ],
+                      )));
+            },
+            childCount: eventItems.length,
+          )),
         ]),
-
-
-
 
         // Feed scroll view
         CustomScrollView(slivers: <Widget>[
@@ -766,19 +762,24 @@ class _NavigationState extends State<Navigation> {
                                     TextButton(
                                       onPressed: () async {
                                         final newEvent = FeedItemDataIsar(
-                                          description: feedItems[index].description,
-                                          eventDate: feedItems[index].eventDate,
-                                          link: feedItems[index].link,
-                                          locationLat: feedItems[index].locationLat,
-                                          locationLong: feedItems[index].locationLong,
-                                          mediaContent: feedItems[index].mediaContent,
-                                          publicationDate: feedItems[index].publicationDate,
-                                          title: feedItems[index].title
-                                        );
+                                            description:
+                                                feedItems[index].description,
+                                            eventDate:
+                                                feedItems[index].eventDate,
+                                            link: feedItems[index].link,
+                                            locationLat:
+                                                feedItems[index].locationLat,
+                                            locationLong:
+                                                feedItems[index].locationLong,
+                                            mediaContent:
+                                                feedItems[index].mediaContent,
+                                            publicationDate: feedItems[index]
+                                                .publicationDate,
+                                            title: feedItems[index].title);
                                         _isar?.writeTxn(() async {
-                                          _isar?.feedItemDataIsars.put(newEvent);
-                                        }
-                                        );
+                                          _isar?.feedItemDataIsars
+                                              .put(newEvent);
+                                        });
                                         buildEvents();
                                         Navigator.of(context)
                                             .pop(DialogsAction.ok);
