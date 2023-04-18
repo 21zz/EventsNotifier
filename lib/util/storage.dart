@@ -4,7 +4,7 @@ part 'storage.g.dart';
 
 @Collection()
 class FeedItemDataIsar {
-  Id id = Isar.autoIncrement;
+  Id id;
 
   String? title;
   String? description;
@@ -16,6 +16,7 @@ class FeedItemDataIsar {
   DateTime? eventDate;
 
   FeedItemDataIsar({
+    required this.id,
     this.title,
     this.description,
     this.link,

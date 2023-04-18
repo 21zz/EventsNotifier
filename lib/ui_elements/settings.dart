@@ -4,18 +4,26 @@ import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 enum DarkMode { darkMode }
 
 enum NotifyBefore {
-  minutes15Before,
-  minutes30Before,
-  minutes45Before,
-  hour1Before,
-  hour2Before,
-  hour4Before,
-  hour8Before,
-  hour12Before,
-  day1Before,
-  day2Before,
-  day3Before,
-  week1Before
+  minutes15Before('15 minutes'),
+  minutes30Before('30 minutes'),
+  minutes45Before('45 minutes'),
+  hour1Before('1 hour'),
+  hour2Before('2 hours'),
+  hour4Before('4 hours'),
+  hour8Before('8 hours'),
+  hour12Before('12 hours'),
+  day1Before('1 day'),
+  day2Before('2 days'),
+  day3Before('3 days'),
+  week1Before('1 week');
+
+  const NotifyBefore(this.type);
+
+  final String type;
+
+  String get() {
+    return type;
+  }
 }
 
 class SettingsWidget extends StatefulWidget {
@@ -30,9 +38,9 @@ class _SettingsState extends State<SettingsWidget> {
   Widget build(BuildContext context) => Scaffold(
           body: SafeArea(
               child: ListView(padding: const EdgeInsets.all(15), children: [
-                buildDarkMode(),
-                SettingsGroup(
-                    title: "General", children: <Widget>[buildNotifySettings()])
+        buildDarkMode(),
+        SettingsGroup(
+            title: "General", children: <Widget>[buildNotifySettings()])
       ])));
 
   Widget buildDarkMode() => SwitchSettingsTile(
@@ -69,9 +77,10 @@ class _SettingsState extends State<SettingsWidget> {
       ]));
 
   Widget build15MinutesBefore() => SwitchSettingsTile(
-      settingKey: NotifyBefore.minutes15Before.name,
-      title: "15 minutes before",
-      defaultValue: false);
+        settingKey: NotifyBefore.minutes15Before.name,
+        title: "15 minutes before",
+        defaultValue: false,
+      );
 
   Widget build30MinutesBefore() => SwitchSettingsTile(
       settingKey: NotifyBefore.minutes30Before.name,

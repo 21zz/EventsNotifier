@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:marshall_event_notifier/ui_elements/settings.dart';
+import 'package:marshall_event_notifier/util/notifications.dart';
 import 'package:marshall_event_notifier/util/rss.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xml/xml.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:marshall_event_notifier/util/storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:isar/isar.dart';
+import 'package:intl/intl.dart';
+import 'dart:math';
 
 enum DialogsAction { ok, cancel }
 
@@ -19,10 +22,12 @@ class Navigation extends StatefulWidget {
 }
 
 class _NavigationState extends State<Navigation> {
+  Random rng = Random.secure();
   var feedItems = [];
   var eventItems = [];
   Isar? _isar;
   int currentPageIndex = 0;
+  NotificationsProvider notifications = NotificationsProvider();
 
   Experience experience = Experience.none;
 
@@ -51,6 +56,7 @@ class _NavigationState extends State<Navigation> {
   void initState() {
     super.initState();
     _getIsar();
+    notifications.init();
   }
 
   _getIsar() async {
@@ -62,8 +68,8 @@ class _NavigationState extends State<Navigation> {
     buildEvents();
   }
 
-  buildEvents() async {
-    var events = await _isar!.feedItemDataIsars.where().findAll();
+  buildEvents() {
+    var events = _isar!.feedItemDataIsars.where().findAllSync();
     if (events.isEmpty) {
       return;
     }
@@ -78,6 +84,7 @@ class _NavigationState extends State<Navigation> {
     debugPrint('$events...${events.length}');
     for (FeedItemDataIsar event in events) {
       var feedItemData = FeedItemData();
+      feedItemData.id = event.id;
       feedItemData.title = event.title;
       feedItemData.description = event.description;
       feedItemData.link = event.link;
@@ -184,6 +191,7 @@ class _NavigationState extends State<Navigation> {
       var publicationDate = event.findElements('pubDate');
       var mediaContent = event.findElements('media:content');
       var eventDate = event.findElements('dc:date');
+      feedItemData.id = rng.nextInt((1 << 31) ~/ 100 - 12); // magic? no, magic~
       title.isEmpty ? null : feedItemData.title = title.first.innerText;
       description.isEmpty
           ? null
@@ -203,8 +211,7 @@ class _NavigationState extends State<Navigation> {
           : feedItemData.mediaContent = mediaContent.first.getAttribute("url");
       eventDate.isEmpty
           ? null
-          : feedItemData.eventDate =
-              DateTime.tryParse(eventDate.first.innerText);
+          : feedItemData.eventDate = DateTime.parse(eventDate.first.innerText);
       setState(() {
         feedItems.add(feedItemData);
       });
@@ -231,19 +238,28 @@ class _NavigationState extends State<Navigation> {
         });
   }
 
-  Widget giveHtml(int index) {
-    return Html(
-        data: feedItems[index].description,
-        onLinkTap: (url, context, attributes, element) {
-          if (url != null) {
-            var newUrl = url.replaceFirst('http://', 'https://');
-            launchUrl(Uri.tryParse(newUrl)!,
-                mode: LaunchMode.platformDefault,
-                webOnlyWindowName: url,
-                webViewConfiguration: const WebViewConfiguration(
-                    enableJavaScript: true, enableDomStorage: false));
-          }
-        });
+  Widget giveFeedHtml(int index) {
+    return HtmlWidget(feedItems[index].description, onTapUrl: (url) {
+      var newUrl = url.replaceFirst('http://', 'https://');
+      launchUrl(Uri.tryParse(newUrl)!,
+          mode: LaunchMode.platformDefault,
+          webOnlyWindowName: url,
+          webViewConfiguration: const WebViewConfiguration(
+              enableJavaScript: true, enableDomStorage: false));
+      return true;
+    });
+  }
+
+  Widget giveEventHtml(int index) {
+    return HtmlWidget(eventItems[index].description, onTapUrl: (url) {
+      var newUrl = url.replaceFirst('http://', 'https://');
+      launchUrl(Uri.tryParse(newUrl)!,
+          mode: LaunchMode.platformDefault,
+          webOnlyWindowName: url,
+          webViewConfiguration: const WebViewConfiguration(
+              enableJavaScript: true, enableDomStorage: false));
+      return true;
+    });
   }
 
   @override
@@ -621,6 +637,9 @@ class _NavigationState extends State<Navigation> {
                   height: 120,
                   padding: const EdgeInsets.all(15),
                   child: InkWell(
+                      onLongPress: () {
+                        debugPrint("longpress");
+                      },
                       onTap: () {
                         showDialog(
                             context: context,
@@ -634,10 +653,20 @@ class _NavigationState extends State<Navigation> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(context)
-                                          .pop(DialogsAction.cancel),
+                                      onPressed: () {
+                                        var id = eventItems[index].id;
+                                        _isar?.writeTxnSync(() => _isar
+                                            ?.feedItemDataIsars
+                                            .deleteSync(id));
+                                        setState(
+                                            () => eventItems.removeAt(index));
+                                        notifications.cancelNotification(id);
+                                        buildEvents();
+                                        Navigator.of(context)
+                                            .pop(DialogsAction.cancel);
+                                      },
                                       child: const Text(
-                                        "Cancel",
+                                        "Remove",
                                         style: TextStyle(color: Colors.red),
                                       ),
                                     ),
@@ -647,7 +676,7 @@ class _NavigationState extends State<Navigation> {
                                             .pop(DialogsAction.ok);
                                       },
                                       child: const Text(
-                                        "Ok",
+                                        "OK",
                                         style: TextStyle(color: Colors.blue),
                                       ),
                                     )
@@ -657,44 +686,58 @@ class _NavigationState extends State<Navigation> {
                                         const BoxConstraints(maxHeight: 1000),
                                     child: Column(
                                       children: <Widget>[
-                                        Flexible(
+                                        Row(children: [
+                                          Expanded(
+                                              child: Text(
+                                                  eventItems[index].title +
+                                                      '\n',
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold)))
+                                        ]),
+                                        Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: <Widget>[
+                                              Container(
+                                                alignment: Alignment.center,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                        maxHeight: 200),
+                                                child: Image.network(
+                                                    eventItems[index]
+                                                        .mediaContent),
+                                              ),
+                                            ]),
+                                        Expanded(
                                             flex: 1,
-                                            fit: FlexFit.loose,
-                                            child: Row(children: [
-                                              Expanded(
-                                                  child: Text(
-                                                      eventItems[index].title +
-                                                          '\n',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: const TextStyle(
-                                                          fontSize: 20,
-                                                          fontWeight:
-                                                              FontWeight.bold)))
-                                            ])),
-                                        Flexible(
-                                            flex: 0,
-                                            fit: FlexFit.loose,
-                                            child: Row(
-                                              children: <Widget>[
-                                                Expanded(
-                                                    child: Image.network(
-                                                        eventItems[index]
-                                                            .mediaContent)),
-                                              ],
-                                            )),
-                                        Flexible(
-                                            flex: 1,
-                                            fit: FlexFit.tight,
                                             child: Row(
                                               children: [
                                                 Expanded(
                                                     child:
                                                         SingleChildScrollView(
-                                                            child: giveHtml(
-                                                                index)))
+                                                            child:
+                                                                giveEventHtml(
+                                                                    index)))
                                               ],
-                                            ))
+                                            )),
+                                        Row(children: [
+                                          Text(
+                                              DateFormat(
+                                                      'h:mma, EEEE, MMMM d, y')
+                                                  .format(eventItems[index]
+                                                      .eventDate),
+                                              style: const TextStyle(
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  decorationStyle:
+                                                      TextDecorationStyle
+                                                          .double)),
+                                        ]),
                                       ],
                                     ),
                                   ));
@@ -760,8 +803,10 @@ class _NavigationState extends State<Navigation> {
                                       ),
                                     ),
                                     TextButton(
-                                      onPressed: () async {
+                                      onPressed: () {
+                                        var id = feedItems[index].id;
                                         final newEvent = FeedItemDataIsar(
+                                            id: id,
                                             description:
                                                 feedItems[index].description,
                                             eventDate:
@@ -776,11 +821,18 @@ class _NavigationState extends State<Navigation> {
                                             publicationDate: feedItems[index]
                                                 .publicationDate,
                                             title: feedItems[index].title);
-                                        _isar?.writeTxn(() async {
+                                        _isar?.writeTxnSync(() {
                                           _isar?.feedItemDataIsars
-                                              .put(newEvent);
+                                              .putSync(newEvent);
                                         });
                                         buildEvents();
+                                        FeedItemDataIsar? data = _isar
+                                            ?.feedItemDataIsars
+                                            .getSync(id);
+                                        EventNotification notif =
+                                            EventNotification(data!.id,
+                                                data.title!, data.eventDate!);
+                                        notifications.notifyBackground(notif);
                                         Navigator.of(context)
                                             .pop(DialogsAction.ok);
                                       },
@@ -795,44 +847,56 @@ class _NavigationState extends State<Navigation> {
                                         const BoxConstraints(maxHeight: 1000),
                                     child: Column(
                                       children: <Widget>[
-                                        Flexible(
+                                        Row(children: [
+                                          Expanded(
+                                              child: Text(
+                                                  feedItems[index].title + '\n',
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold)))
+                                        ]),
+                                        Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: <Widget>[
+                                              Container(
+                                                alignment: Alignment.center,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                        maxHeight: 200),
+                                                child: Image.network(
+                                                    feedItems[index]
+                                                        .mediaContent),
+                                              ),
+                                            ]),
+                                        Expanded(
                                             flex: 1,
-                                            fit: FlexFit.loose,
-                                            child: Row(children: [
-                                              Expanded(
-                                                  child: Text(
-                                                      feedItems[index].title +
-                                                          '\n',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: const TextStyle(
-                                                          fontSize: 20,
-                                                          fontWeight:
-                                                              FontWeight.bold)))
-                                            ])),
-                                        Flexible(
-                                            flex: 0,
-                                            fit: FlexFit.loose,
-                                            child: Row(
-                                              children: <Widget>[
-                                                Expanded(
-                                                    child: Image.network(
-                                                        feedItems[index]
-                                                            .mediaContent)),
-                                              ],
-                                            )),
-                                        Flexible(
-                                            flex: 1,
-                                            fit: FlexFit.tight,
                                             child: Row(
                                               children: [
                                                 Expanded(
                                                     child:
                                                         SingleChildScrollView(
-                                                            child: giveHtml(
+                                                            child: giveFeedHtml(
                                                                 index)))
                                               ],
-                                            ))
+                                            )),
+                                        Row(children: [
+                                          Text(
+                                              DateFormat(
+                                                      'h:mma, EEEE, MMMM d, y')
+                                                  .format(feedItems[index]
+                                                      .eventDate),
+                                              style: const TextStyle(
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  decorationStyle:
+                                                      TextDecorationStyle
+                                                          .double)),
+                                        ]),
                                       ],
                                     ),
                                   ));
@@ -959,6 +1023,7 @@ class FeedFilter {
 }
 
 class FeedItemData {
+  int? id;
   String? title;
   String? description;
   String? link;
