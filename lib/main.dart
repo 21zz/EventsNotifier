@@ -4,6 +4,7 @@ import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'ui_elements/settings.dart';
 import 'ui_elements/navigation.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Settings.init(
@@ -15,7 +16,6 @@ void main() async {
 
 class MUApp extends StatelessWidget {
   const MUApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return ValueChangeObserver<bool>(

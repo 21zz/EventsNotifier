@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:marshall_event_notifier/ui_elements/settings.dart';
 import 'package:marshall_event_notifier/util/rss.dart';
 import 'package:transparent_image/transparent_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:xml/xml.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:marshall_event_notifier/util/storage.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:isar/isar.dart';
+
 
 enum DialogsAction { ok, cancel }
 
@@ -16,6 +22,7 @@ class Navigation extends StatefulWidget {
 class _NavigationState extends State<Navigation> {
   var feedItems = [];
   var eventItems = [];
+  Isar? _isar;
   int currentPageIndex = 0;
 
   Experience experience = Experience.none;
@@ -40,6 +47,55 @@ class _NavigationState extends State<Navigation> {
   bool? alumniChecked = false;
   bool? generalPublicChecked = false;
   bool? prospectiveStudentsChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getIsar();
+  }
+
+
+  _getIsar() async {
+    final dir = await getApplicationDocumentsDirectory();
+    _isar = await Isar.open(
+      [FeedItemDataIsarSchema],
+      directory: dir.path,
+    );
+    buildEvents();
+  }
+
+  buildEvents() async {
+    var events = await _isar!.feedItemDataIsars.where().findAll();
+    if(events.isEmpty) {
+      return;
+    }
+    // clear current list
+    while(eventItems.isNotEmpty) {
+    setState(() {
+        eventItems.removeLast();
+      });
+    }
+
+    // build new list
+    debugPrint('$events...${events.length}');
+    for (FeedItemDataIsar event in events) {
+      var feedItemData = FeedItemData();
+      feedItemData.title = event.title;
+      feedItemData.description = event.description;
+      feedItemData.link = event.link;
+      feedItemData.locationLat = event.locationLat;
+      feedItemData.locationLong = event.locationLong;
+      feedItemData.publicationDate = event.publicationDate;
+      feedItemData.mediaContent = event.mediaContent;
+      feedItemData.eventDate = event.eventDate;
+
+      // update
+      setState(() {
+        debugPrint('adding ${feedItemData.title}');
+        eventItems.add(feedItemData);
+      });
+    }
+  }
 
   buildFeed(context) async {
     if (feedItems.isNotEmpty) {
@@ -129,6 +185,7 @@ class _NavigationState extends State<Navigation> {
       var locationLong = event.findElements('geo:long');
       var publicationDate = event.findElements('pubDate');
       var mediaContent = event.findElements('media:content');
+      var eventDate = event.findElements('dc:date');
       title.isEmpty ? null : feedItemData.title = title.first.innerText;
       description.isEmpty
           ? null
@@ -146,6 +203,10 @@ class _NavigationState extends State<Navigation> {
       mediaContent.isEmpty
           ? null
           : feedItemData.mediaContent = mediaContent.first.getAttribute("url");
+      eventDate.isEmpty
+          ? null
+          : feedItemData.eventDate =
+              DateTime.tryParse(eventDate.first.innerText);
       setState(() {
         feedItems.add(feedItemData);
       });
@@ -169,6 +230,21 @@ class _NavigationState extends State<Navigation> {
                   Text("No events found for current filter.")
                 ],
               ));
+        });
+  }
+
+  Widget giveHtml(int index) {
+    return Html(
+        data: feedItems[index].description,
+        onLinkTap: (url, context, attributes, element) {
+          if (url != null) {
+            var newUrl = url.replaceFirst('http://', 'https://');
+            launchUrl(Uri.tryParse(newUrl)!,
+                mode: LaunchMode.platformDefault,
+                webOnlyWindowName: url,
+                webViewConfiguration: const WebViewConfiguration(
+                    enableJavaScript: true, enableDomStorage: false));
+          }
         });
   }
 
@@ -537,8 +613,127 @@ class _NavigationState extends State<Navigation> {
         ],
       ),
       body: <Widget>[
-        const CustomScrollView(
-            slivers: <Widget>[SliverFillRemaining(child: FlutterLogo())]),
+        // Events scroll view
+        CustomScrollView(slivers: <Widget>[
+          SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (BuildContext ctx, int index) {
+                  return Container(
+                      alignment: Alignment.center,
+                      height: 120,
+                      padding: const EdgeInsets.all(15),
+                      child: InkWell(
+                          onTap: () {
+                            showDialog(
+                                context: context,
+                                builder: (BuildContext ctx2) {
+                                  return AlertDialog(
+                                      contentPadding: const EdgeInsets.all(15),
+                                      scrollable: false,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.all(Radius.circular(10.0)),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context)
+                                              .pop(DialogsAction.cancel),
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop(DialogsAction.ok);
+                                          },
+                                          child: const Text(
+                                            "Ok",
+                                            style: TextStyle(color: Colors.blue),
+                                          ),
+                                        )
+                                      ],
+                                      content: ConstrainedBox(
+                                        constraints:
+                                        const BoxConstraints(maxHeight: 1000),
+                                        child: Column(
+                                          children: <Widget>[
+                                            Flexible(
+                                                flex: 1,
+                                                fit: FlexFit.loose,
+                                                child: Row(children: [
+                                                  Expanded(
+                                                      child: Text(
+                                                          eventItems[index].title +
+                                                              '\n',
+                                                          textAlign:
+                                                          TextAlign.center,
+                                                          style: const TextStyle(
+                                                              fontSize: 20,
+                                                              fontWeight:
+                                                              FontWeight.bold)))
+                                                ])),
+                                            Flexible(
+                                                flex: 0,
+                                                fit: FlexFit.loose,
+                                                child: Row(
+                                                  children: <Widget>[
+                                                    Expanded(
+                                                        child: Image.network(
+                                                            eventItems[index]
+                                                                .mediaContent)),
+                                                  ],
+                                                )),
+                                            Flexible(
+                                                flex: 1,
+                                                fit: FlexFit.tight,
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                        child:
+                                                        SingleChildScrollView(
+                                                            child: giveHtml(
+                                                                index)))
+                                                  ],
+                                                ))
+                                          ],
+                                        ),
+                                      ));
+                                });
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                  child: Row(children: [
+                                    Expanded(
+                                      flex: 1,
+                                      child: FadeInImage.memoryNetwork(
+                                          fit: BoxFit.fitHeight,
+                                          image: eventItems[index].mediaContent,
+                                          placeholder: kTransparentImage),
+                                    ),
+                                    Expanded(
+                                      child: Column(children: [
+                                        Expanded(
+                                          child: Text(eventItems[index].title,
+                                              overflow: TextOverflow.visible,
+                                              style: const TextStyle(fontSize: 13)),
+                                        )
+                                      ]),
+                                    )
+                                  ]))
+                            ],
+                          )));
+                },
+                childCount: eventItems.length,
+              )),
+        ]),
+
+
+
+
+        // Feed scroll view
         CustomScrollView(slivers: <Widget>[
           SliverList(
               delegate: SliverChildBuilderDelegate(
@@ -556,58 +751,116 @@ class _NavigationState extends State<Navigation> {
                             builder: (BuildContext ctx2) {
                               return AlertDialog(
                                   contentPadding: const EdgeInsets.all(15),
-                                  scrollable: true,
+                                  scrollable: false,
                                   shape: const RoundedRectangleBorder(
                                     borderRadius:
                                         BorderRadius.all(Radius.circular(10.0)),
                                   ),
-                                  content: SingleChildScrollView(
-                                      child: ConstrainedBox(
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context)
+                                          .pop(DialogsAction.cancel),
+                                      child: const Text(
+                                        "Cancel",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        final newEvent = FeedItemDataIsar(
+                                          description: feedItems[index].description,
+                                          eventDate: feedItems[index].eventDate,
+                                          link: feedItems[index].link,
+                                          locationLat: feedItems[index].locationLat,
+                                          locationLong: feedItems[index].locationLong,
+                                          mediaContent: feedItems[index].mediaContent,
+                                          publicationDate: feedItems[index].publicationDate,
+                                          title: feedItems[index].title
+                                        );
+                                        _isar?.writeTxn(() async {
+                                          _isar?.feedItemDataIsars.put(newEvent);
+                                        }
+                                        );
+                                        buildEvents();
+                                        Navigator.of(context)
+                                            .pop(DialogsAction.ok);
+                                      },
+                                      child: const Text(
+                                        "Add",
+                                        style: TextStyle(color: Colors.blue),
+                                      ),
+                                    )
+                                  ],
+                                  content: ConstrainedBox(
                                     constraints:
-                                        const BoxConstraints(maxHeight: 400),
+                                        const BoxConstraints(maxHeight: 1000),
                                     child: Column(
                                       children: <Widget>[
                                         Flexible(
                                             flex: 1,
                                             fit: FlexFit.loose,
+                                            child: Row(children: [
+                                              Expanded(
+                                                  child: Text(
+                                                      feedItems[index].title +
+                                                          '\n',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                          fontSize: 20,
+                                                          fontWeight:
+                                                              FontWeight.bold)))
+                                            ])),
+                                        Flexible(
+                                            flex: 0,
+                                            fit: FlexFit.loose,
                                             child: Row(
                                               children: <Widget>[
                                                 Expanded(
-                                                    child: Text(
-                                                        feedItems[index].title,
-                                                        style: const TextStyle(
-                                                            fontSize: 16)))
+                                                    child: Image.network(
+                                                        feedItems[index]
+                                                            .mediaContent)),
+                                              ],
+                                            )),
+                                        Flexible(
+                                            flex: 1,
+                                            fit: FlexFit.tight,
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                    child:
+                                                        SingleChildScrollView(
+                                                            child: giveHtml(
+                                                                index)))
                                               ],
                                             ))
                                       ],
                                     ),
-                                  )));
+                                  ));
                             });
                       },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                              child: Row(
-                            children: [
-                              Expanded(
-                                flex: 1,
-                                child: FadeInImage.memoryNetwork(
-                                    fit: BoxFit.fitHeight,
-                                    image: feedItems[index].mediaContent,
-                                    placeholder: kTransparentImage),
-                              ),
-                              Expanded(
-                                child: Column(children: [
-                                  Expanded(
-                                    child: Text(feedItems[index].title,
-                                        overflow: TextOverflow.visible,
-                                        style: const TextStyle(fontSize: 13)),
-                                  )
-                                ]),
-                              )
-                            ]
-                          ))
+                              child: Row(children: [
+                            Expanded(
+                              flex: 1,
+                              child: FadeInImage.memoryNetwork(
+                                  fit: BoxFit.fitHeight,
+                                  image: feedItems[index].mediaContent,
+                                  placeholder: kTransparentImage),
+                            ),
+                            Expanded(
+                              child: Column(children: [
+                                Expanded(
+                                  child: Text(feedItems[index].title,
+                                      overflow: TextOverflow.visible,
+                                      style: const TextStyle(fontSize: 13)),
+                                )
+                              ]),
+                            )
+                          ]))
                         ],
                       )));
             },
@@ -714,6 +967,7 @@ class FeedItemData {
   String? locationLong;
   String? publicationDate;
   String? mediaContent;
+  DateTime? eventDate;
 
   FeedItemData();
 }
