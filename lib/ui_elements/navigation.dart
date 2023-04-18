@@ -727,16 +727,12 @@ class _NavigationState extends State<Navigation> {
                                             )),
                                         Row(children: [
                                           Text(
-                                              DateFormat(
-                                                      'h:mma, EEEE, MMMM d, y')
-                                                  .format(eventItems[index]
-                                                      .eventDate),
+                                              DateFormat('h:mma, EEEE, MMMM d, y').format(DateFormat("yyyy-MM-dd HH:mm:ssZ").parseUTC(eventItems[index].eventDate.toString())),
                                               style: const TextStyle(
                                                   decoration:
-                                                      TextDecoration.underline,
+                                                      TextDecoration.overline,
                                                   decorationStyle:
-                                                      TextDecorationStyle
-                                                          .double)),
+                                                      TextDecorationStyle.solid)),
                                         ]),
                                       ],
                                     ),
@@ -886,16 +882,13 @@ class _NavigationState extends State<Navigation> {
                                             )),
                                         Row(children: [
                                           Text(
-                                              DateFormat(
-                                                      'h:mma, EEEE, MMMM d, y')
-                                                  .format(feedItems[index]
-                                                      .eventDate),
+                                              DateFormat('h:mma, EEEE, MMMM d, y').format(DateFormat("yyyy-MM-dd HH:mm:ssZ").parseUTC(feedItems[index].eventDate.toString()).toLocal()),
                                               style: const TextStyle(
                                                   decoration:
-                                                      TextDecoration.underline,
+                                                      TextDecoration.overline,
                                                   decorationStyle:
                                                       TextDecorationStyle
-                                                          .double)),
+                                                          .solid)),
                                         ]),
                                       ],
                                     ),
