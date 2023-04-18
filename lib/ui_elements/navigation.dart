@@ -744,8 +744,6 @@ class _NavigationState extends State<Navigation> {
                   padding: const EdgeInsets.all(15),
                   child: InkWell(
                       onTap: () {
-                        // TODO: remove
-                        debugPrint('tapped');
                         showDialog(
                             context: context,
                             builder: (BuildContext ctx2) {
